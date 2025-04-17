@@ -55,7 +55,77 @@ class Model:
         self._cammino_ottimo = []
         self._score_ottimo = 0
 
+#ABBIAMO INIZIATO A SCRIVERE DA QUI ----------------------------------------------------------------------
+        #Questa è la funzione chiamata nel controlle quando schiacci sul bottone
         #TODO
+        #il primo nodo lo metti qui poi far partire la ricorsione
+        for node in self._grafo.nodes():
+            parziale=[node]
+            rimanenti=self.calcola_rimanenti_parziale(parziale)
+            self._ricorsione(parziale, rimanenti)
 
         return self._cammino_ottimo, self._score_ottimo
 
+
+    def _ricorsione(self,parziale,nodi_rimanenti ):
+        #caso terminale
+        if len(nodi_rimanenti)==0 :
+            punteggio= self.calcola_punteggio(parziale)
+            if punteggio>self._score_ottimo:
+                self._score_ottimo = punteggio
+                self._cammino_ottimo = copy.deepcopy(parziale)
+                print(parziale)
+
+        #caso ricorsivo:
+        else:
+            #per ogni nodo rimanente
+            for nodo in nodi_rimanenti:
+                #funziona perchè il grafo è fatto senza possibilità che esistano i cicli
+                #aggiungere il nodo
+                parziale.append(nodo)
+                #calcolare i nuovi rimanenti dopo l'aggiunta el nodo (i suoi siccessori)
+                nuovi_rimanenti=self.calcola_rimanenti_parziale(parziale)
+                #richiamare la ricorsione con parziale esteso e i nuovi_rimanenti
+                self._ricorsione(parziale, nuovi_rimanenti)
+                #back traking
+                parziale.pop()
+
+
+
+    def calcola_rimanenti_parziale(self, parziale):
+        #la funzione succeccors dato il grafo e dato l'ultimo nodo cosegna tutti i successori del nodo
+        nuovi_rimanenti=[]
+        #prediamo i nodi successivi
+        for i in self._grafo.successors(parziale[-1]):
+            # la funzione torna un iteratore -> sopra ci puoi solo iterare ma non ciedere quanto sia lungo
+            # metto dentro una lista
+            #verifico il vincolo sul mese prima di appendere
+            if self.is_vincolo_ok(parziale,i) and self.is_vincolo_durata_ok(parziale,i):
+                nuovi_rimanenti.append(i)
+        return nuovi_rimanenti
+
+    def is_vincolo_ok(self, parziale, nodo:Sighting):
+        mese=nodo.datetime.month
+        counter=0
+        for i in parziale:
+            if i.datetime.month==mese:
+                counter+=1
+        if counter>=3:
+            return False
+        else:
+            return True
+
+    def is_vincolo_durata_ok(self, parziale, nodo:Sighting):
+        return nodo.duration>parziale[-1].duration
+
+    def calcola_punteggio(self, parziale):
+        punteggio=0
+        #termine fisso
+        punteggio += len(parziale)*100
+        #termine variabile
+        for i in range(1,len(parziale)):
+            nodo=parziale[i]
+            nodo_precedente=parziale[i-1]
+            if nodo.datetime.month==nodo_precedente.datetime.month:
+                punteggio+=200
+        return punteggio
